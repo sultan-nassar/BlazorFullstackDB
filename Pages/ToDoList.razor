@@ -1,0 +1,95 @@
+﻿@page "/ToDoList"
+@using BlazorFull.Models
+@using BlazorFull.Services
+@using BlazorFull.Interfaces
+
+@inject  IToDoService todoservice
+
+
+
+<h3>ToDoList</h3>
+
+
+<form @onsubmit="AddTodo">
+	<label for="todoTitle">Todo Title:</label>
+	<input type="text" id="todoTitle" placeholder="Add new todo" @bind="newTodoTask.Title" required />
+	<button type="submit">Add Todo</button>
+</form>
+
+<ul>
+    @foreach (ToDoModel todo in _todos)
+    {
+        <li style="@GetTodoStyle(todo)">
+            <input type="checkbox" @bind="todo.IsDone" />
+            @if (todo.IsEditing)
+            {
+                <div>
+                    <input type="text" @bind="todo.Title" />
+                    <button @onclick="() => UpdateTodo(todo)">Update</button>
+                </div>
+            }
+            else
+            {
+                <span>@todo.Title</span>
+                <button @onclick="() => DeleteTodo(todo.Id)">Delete</button>
+                <button @onclick="() => StartEditing(todo)">Edit</button>
+            }
+        </li>
+    }
+</ul>
+
+@code {
+
+
+
+    private List<ToDoModel> _todos = new List<ToDoModel>();
+    ToDoModel newTodoTask = new Models.ToDoModel();
+    protected override async Task OnInitializedAsync()
+    {
+        _todos = await todoservice.GetTasks();
+
+    }
+
+   
+
+    async Task AddTodo()
+    {
+        await todoservice.AddTask(newTodoTask);
+        newTodoTask = new ToDoModel(); // Clear the input after adding
+        _todos = await todoservice.GetTasks(); // Refresh the list
+        StateHasChanged(); // Request re-render
+    }
+
+    async Task DeleteTodo(Guid id)
+    {
+        await todoservice.DeleteTask(id);
+        _todos = await todoservice.GetTasks(); // Refresh the list
+        StateHasChanged(); // Request re-render
+    }
+
+    async Task StartEditing(ToDoModel todo)
+    {
+        // Set the task to edit mode
+        todo.IsEditing = true;
+        StateHasChanged(); // Request re-render
+    }
+
+    async Task UpdateTodo(ToDoModel todo)
+    {
+        // Update the task
+        await todoservice.EditTask(todo.Id, todo);
+
+        // Reset editing mode
+        todo.IsEditing = false;
+
+        // Refresh the list
+        _todos = await todoservice.GetTasks();
+        StateHasChanged(); // Request re-render
+    }
+
+    private string GetTodoStyle(ToDoModel todo)
+    {
+        return todo.IsDone ? "text-decoration:line-through" : "";
+    }
+
+}
